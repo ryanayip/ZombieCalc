@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Yipsey's Zombie Miner Calculator</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      :root {
+        --bg: #e6ebf2;
+        --card: #fff;
+        --accent: #111;
+        --accent-2: #d9534f;
+      }
+      body {
+        font-family: Inter, system-ui, Segoe UI, Arial, sans-serif;
+        background: var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .calc {
+        width: 360px;
+        background: var(--card);
+        padding: 22px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+      }
+      h2 {
+        text-align: center;
+        margin: 0 0 14px;
+        font-weight: 600;
+      }
+      .screen {
+        background: var(--accent);
+        color: var(--accent-2);
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 26px;
+        text-align: right;
+        letter-spacing: 0.6px;
+        min-height: 48px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+      }
+      button {
+        padding: 14px;
+        font-size: 18px;
+        border-radius: 10px;
+        border: 0;
+        background: #f0f0f0;
+        cursor: pointer;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .op {
+        background: #222;
+        color: #fff;
+      }
+      .clear {
+        background: #d9534f;
+        color: #fff;
+      }
+      .suffix-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .suffix-grid button {
+        padding: 10px;
+        font-size: 13px;
+      }
+      .sel {
+        outline: 3px solid rgba(0, 150, 0, 0.12);
+      }
+      .note {
+        font-size: 12px;
+        color: #555;
+        margin-top: 8px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calc">
+      <h2>Zombie Miner Multiplier</h2>
+      <div id="screen" class="screen">0</div>
+
+      <div class="grid">
+        <button onclick="press('7')">7</button>
+        <button onclick="press('8')">8</button>
+        <button onclick="press('9')">9</button>
+        <button class="op" onclick="startMult()">×</button>
+
+        <button onclick="press('4')">4</button>
+        <button onclick="press('5')">5</button>
+        <button onclick="press('6')">6</button>
+        <button class="op" onclick="calculate()">=</button>
+
+        <button onclick="press('1')">1</button>
+        <button onclick="press('2')">2</button>
+        <button onclick="press('3')">3</button>
+        <button class="clear" onclick="clearAll()">CLEAR</button>
+
+        <button onclick="press('0')">0</button>
+        <button onclick="press('.')">.</button>
+        <button onclick="backspace()">DEL</button>
+        <div></div>
+      </div>
+
+      <div class="suffix-grid" id="suffixGrid"></div>
+      <div class="note">
+        Enter number, click a letter, then multiply: (5T x 1000 = 5AA)
+      </div>
+      <div class="note">Say hi if you used it: @yipsey on Discord</div>
+    </div>
+
+    <script>
+      // state
+      const screen = document.getElementById("screen");
+      let baseNum = ""; // digits of base (string)
+      let suffix = ""; // suffix string like 'K' or 'AA'
+      let mult = ""; // multiplier digits
+      let mode = "base"; // 'base' or 'mult'
+
+      // build suffix buttons (K,M,B,T and AA..AZ)
+      const suffixGrid = document.getElementById("suffixGrid");
+      const primary = ["K", "M", "B", "T"];
+      primary.forEach((s) => {
+        const btn = document.createElement("button");
+        btn.textContent = s;
+        btn.onclick = () => applySuffix(s);
+        suffixGrid.appendChild(btn);
+      });
+
+      // AA..AZ
+      const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      for (let i = 0; i < 26; i++) {
+        const s = "A" + A[i];
+        const btn = document.createElement("button");
+        btn.textContent = s;
+        btn.onclick = () => applySuffix(s);
+        suffixGrid.appendChild(btn);
+      }
+
+      function updateScreen() {
+        let left = baseNum || "0";
+        if (suffix) left += suffix;
+        let txt = left;
+        if (mode === "mult" && mult) txt += " × " + mult;
+        screen.textContent = txt;
+      }
+
+      function press(d) {
+        if (mode === "base") {
+          // prevent multiple leading zeros
+          if (d === "0" && baseNum === "0") return;
+          if (d === "." && baseNum.includes(".")) return;
+          if (baseNum === "0" && d !== ".") baseNum = d;
+          else baseNum += d;
+        } else {
+          if (d === "." && mult.includes(".")) return;
+          if (mult === "0" && d === "0") return;
+          if (mult === "0" && d !== ".") mult = d;
+          else mult += d;
+        }
+        updateScreen();
+      }
+
+      function applySuffix(s) {
+        // suffix must be applied to base; ignore if base empty
+        if (!baseNum) return;
+        suffix = s;
+        // highlight selected button
+        Array.from(suffixGrid.children).forEach((b) =>
+          b.classList.toggle("sel", b.textContent === s)
+        );
+        updateScreen();
+      }
+
+      function startMult() {
+        // only start multiplier if base+suffix exist
+        if (!baseNum || !suffix) return;
+        mode = "mult";
+        updateScreen();
+      }
+
+      function clearAll() {
+        baseNum = "";
+        suffix = "";
+        mult = "";
+        mode = "base";
+        Array.from(suffixGrid.children).forEach((b) =>
+          b.classList.remove("sel")
+        );
+        updateScreen();
+      }
+      function backspace() {
+        if (mode === "base") {
+          baseNum = baseNum.slice(0, -1);
+          if (baseNum === "") baseNum = "";
+        } else {
+          mult = mult.slice(0, -1);
+        }
+        updateScreen();
+      }
+
+      // conversion helpers
+      const SCALES = (function () {
+        const arr = ["", "K", "M", "B", "T"];
+        const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        for (let i = 0; i < 26; i++) arr.push("A" + A[i]);
+        return arr;
+      })();
+
+      function parseScaled(numStr, suf) {
+        const num = parseFloat(numStr) || 0;
+        const p = SCALES.indexOf(suf);
+        const factor = p >= 0 ? Math.pow(1000, p) : 1;
+        return num * factor;
+      }
+
+      function formatScaled(val) {
+        let p = 0;
+        while (val >= 1000 && p < SCALES.length - 1) {
+          val /= 1000;
+          p++;
+        }
+        return val.toFixed(2) + SCALES[p];
+      }
+
+      function calculate() {
+        if (!baseNum || !suffix) return;
+        const left = parseScaled(baseNum, suffix);
+        const right = parseFloat(mult) || 0;
+        if (right === 0) return; // multiplier must be a number
+        let res = left * right;
+        const out = formatScaled(res);
+        // show result as new base (so you can chain calculations)
+        // split number and suffix from out
+        // find suffix match from end
+        for (let i = 0; i < SCALES.length; i++) {
+          const s = SCALES[i];
+          if (s === "") continue;
+        }
+        // find where digits end
+        const match = out.match(/^([0-9.,]+)([A-Z]*)$/i);
+        if (match) {
+          baseNum = parseFloat(match[1]).toString();
+          suffix = match[2] || "";
+        } else {
+          baseNum = out;
+          suffix = "";
+        }
+        mult = "";
+        mode = "base";
+        Array.from(suffixGrid.children).forEach((b) =>
+          b.classList.toggle("sel", b.textContent === suffix)
+        );
+        updateScreen();
+      }
+
+      // init
+      updateScreen();
+    </script>
+  </body>
+</html>
